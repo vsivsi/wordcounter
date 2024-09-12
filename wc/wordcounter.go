@@ -47,7 +47,8 @@ func (wr *WordReader) Words() iter.Seq[string] {
 	word := make([]byte, 1024)
 	return func(yield func(string) bool) {
 		var err error
-		for n, err := wr.Read(word); err == nil; n, err = wr.Read(word) {
+		var n int
+		for n, err = wr.Read(word); err == nil; n, err = wr.Read(word) {
 			if !yield(string(word[:n])) {
 				return
 			}
@@ -109,7 +110,7 @@ func (pr *ProbabilisticSkipper) ShouldSkip() bool {
 // EstimateUniqueWords estimates the number of unique words using a probabilistic counting method
 func EstimateUniqueWords(reader io.Reader, memorySize int) int {
 	wordReader := NewWordReader(reader)
-	words := make(map[string]struct{})
+	words := make(map[string]struct{}, memorySize)
 
 	rounds := 0
 	roundRemover := NewProbabilisticSkipper(1)
@@ -127,6 +128,7 @@ func EstimateUniqueWords(reader io.Reader, memorySize int) int {
 			wordSkipper = NewProbabilisticSkipper(rounds)
 			for word := range words {
 				if roundRemover.ShouldSkip() {
+					// if rand.Intn(2) == 0 {
 					delete(words, word)
 				}
 			}

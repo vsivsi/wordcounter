@@ -5,9 +5,12 @@ import (
 	"testing"
 )
 
+var (
+	input         = "Hello, world! This is a test."
+	expectedWords = []string{"hello", "world", "this", "is", "a", "test"}
+)
+
 func TestWordReaderRead(t *testing.T) {
-	input := "Hello, world! This is a test."
-	expectedWords := []string{"hello", "world", "this", "is", "a", "test"}
 
 	reader := NewWordReader(strings.NewReader(input))
 	word := make([]byte, 1024)
@@ -29,8 +32,6 @@ func TestWordReaderRead(t *testing.T) {
 }
 
 func TestWordReaderIter(t *testing.T) {
-	input := "Hello, world! This is a test."
-	expectedWords := []string{"hello", "world", "this", "is", "a", "test"}
 
 	reader := NewWordReader(strings.NewReader(input))
 	var words []string
@@ -47,5 +48,19 @@ func TestWordReaderIter(t *testing.T) {
 		if word != expectedWords[i] {
 			t.Errorf("expected word %d to be %q, got %q", i, expectedWords[i], word)
 		}
+	}
+}
+
+func TestEstimateUniqueWords(t *testing.T) {
+	input := "Hello, world! This is a test. Hello, world, hello!"
+	expectedUniqueWords := 6 // "hello", "world", "this", "is", "a", "test" (but "hello" and "world" are repeated)
+
+	reader := strings.NewReader(input)
+	memorySize := 6
+
+	estimatedUniqueWords := EstimateUniqueWords(reader, memorySize)
+
+	if estimatedUniqueWords != expectedUniqueWords {
+		t.Errorf("expected %d unique words, got %d", expectedUniqueWords, estimatedUniqueWords)
 	}
 }

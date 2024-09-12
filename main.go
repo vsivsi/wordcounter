@@ -32,4 +32,5 @@ func main() {
 
 	estimatedUniqueWords := wc.EstimateUniqueWords(reader, memorySize)
 	fmt.Printf("Estimated number of unique words: %d\n", estimatedUniqueWords)
+	os.Exit(0)
 }
