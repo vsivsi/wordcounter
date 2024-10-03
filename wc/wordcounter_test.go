@@ -36,7 +36,7 @@ func TestWordReaderIter(t *testing.T) {
 	reader := NewWordReader(strings.NewReader(input))
 	var words []string
 
-	for word := range reader.Words() {
+	for word := range reader.All() {
 		words = append(words, word)
 	}
 
@@ -52,13 +52,25 @@ func TestWordReaderIter(t *testing.T) {
 }
 
 func TestEstimateUniqueWords(t *testing.T) {
-	input := "Hello, world! This is a test. Hello, world, hello!"
+	expectedUniqueWords := 6
+
+	reader := strings.NewReader(input)
+	memorySize := 4
+
+	estimatedUniqueWords := EstimateUniqueWords(reader, memorySize)
+
+	if estimatedUniqueWords != expectedUniqueWords {
+		t.Errorf("expected %d unique words, got %d", expectedUniqueWords, estimatedUniqueWords)
+	}
+}
+
+func TestEstimateUniqueWordsOld(t *testing.T) {
 	expectedUniqueWords := 6 // "hello", "world", "this", "is", "a", "test" (but "hello" and "world" are repeated)
 
 	reader := strings.NewReader(input)
 	memorySize := 6
 
-	estimatedUniqueWords := EstimateUniqueWords(reader, memorySize)
+	estimatedUniqueWords := EstimateUniqueWordsOld(reader, memorySize)
 
 	if estimatedUniqueWords != expectedUniqueWords {
 		t.Errorf("expected %d unique words, got %d", expectedUniqueWords, estimatedUniqueWords)

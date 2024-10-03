@@ -42,13 +42,20 @@ func (wr *WordReader) Read(p []byte) (n int, err error) {
 	return n, nil
 }
 
-// Words returns an iterator allowing the caller to iterate over the WordReader using for/range.
-func (wr *WordReader) Words() iter.Seq[string] {
+// All returns an iterator allowing the caller to iterate over the WordReader using for/range.
+func (wr *WordReader) All() iter.Seq[string] {
 	word := make([]byte, 1024)
 	return func(yield func(string) bool) {
 		var err error
 		var n int
-		for n, err = wr.Read(word); err == nil; n, err = wr.Read(word) {
+		for {
+			n, err = wr.Read(word)
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				panic(err)
+			}
+
 			if !yield(string(word[:n])) {
 				return
 			}
@@ -116,20 +123,65 @@ func EstimateUniqueWords(reader io.Reader, memorySize int) int {
 	roundRemover := NewProbabilisticSkipper(1)
 	wordSkipper := NewProbabilisticSkipper(0)
 
-	for word := range wordReader.Words() {
+	for word := range wordReader.All() {
 		if wordSkipper.ShouldSkip() {
 			delete(words, word)
-			continue
-		}
-		words[word] = struct{}{}
+		} else {
+			words[word] = struct{}{}
 
-		if len(words) >= memorySize {
-			rounds++
-			wordSkipper = NewProbabilisticSkipper(rounds)
-			for word := range words {
-				if roundRemover.ShouldSkip() {
-					// if rand.Intn(2) == 0 {
-					delete(words, word)
+			if len(words) >= memorySize {
+				rounds++
+				wordSkipper = NewProbabilisticSkipper(rounds)
+				for w := range words {
+					if roundRemover.ShouldSkip() {
+						delete(words, w)
+					}
+				}
+			}
+		}
+	}
+
+	if len(words) == 0 {
+		return 0
+	}
+
+	invProbability := 1 << rounds
+	estimatedUniqueWords := len(words) * invProbability
+	return estimatedUniqueWords
+}
+
+// EstimateUniqueWordsOld estimates the number of unique words using a probabilistic counting method
+// EstimateUniqueWords estimates the number of unique words using a probabilistic counting method
+func EstimateUniqueWordsOld(reader io.Reader, memorySize int) int {
+	wordReader := NewWordReader(reader)
+	words := make(map[string]struct{})
+	buf := make([]byte, 100)
+
+	rounds := 0
+	roundRemover := NewProbabilisticSkipper(1)
+	wordSkipper := NewProbabilisticSkipper(0)
+
+	for {
+		n, err := wordReader.Read(buf)
+		if err == io.EOF {
+			break
+		} else if err != nil {
+			panic(err)
+		}
+
+		word := string(buf[:n])
+		if wordSkipper.ShouldSkip() {
+			delete(words, word)
+		} else {
+			words[word] = struct{}{}
+
+			if len(words) >= memorySize {
+				rounds++
+				wordSkipper = NewProbabilisticSkipper(rounds)
+				for word := range words {
+					if roundRemover.ShouldSkip() {
+						delete(words, word)
+					}
 				}
 			}
 		}
